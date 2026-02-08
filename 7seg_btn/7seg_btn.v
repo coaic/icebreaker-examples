@@ -2,11 +2,13 @@
 
 // Button-triggered hex counter on dual 7-segment display PMOD.
 // Attach 7 segment display PMOD to Icebreaker PMOD1A port.
-// Press BTN_N to increment counter from 00 to FF.
+// Press BTN_N to single-step counter from 00 to FF.
+// Press BTN1 (PMOD 2) to toggle free-running auto-increment.
 
 module top(
            input  CLK,
            input  BTN_N,
+           input  BTN1,
            output P1A1,
            output P1A2,
            output P1A3,
@@ -23,23 +25,35 @@ module top(
    assign {P1A9, P1A8, P1A7, P1A4, P1A3, P1A2, P1A1} = seg_pins_n;
    assign P1A10 = digit_sel;
 
-   // Free-running counter for display multiplexing.
+   // Free-running counter for display multiplexing and timing.
    // display_state at bits [4:2] gives ~375 KHz refresh.
    // Bit 13 gives ~1.5 KHz for debounce sampling.
-   reg [19:0]     display_counter;
+   // Bit 21 gives ~2.86 Hz for auto-increment when running.
+   reg [23:0]     display_counter;
    wire [2:0]     display_state = display_counter[4:2];
 
-   // Hex counter value: incremented by button press.
+   // Hex counter value: incremented by button press or auto-run.
    reg [7:0]      count;
    wire [3:0]     ones = count[3:0];
    wire [3:0]     tens = count[7:4];
 
-   // Button debounce shift register.
+   // BTN_N debounce shift register.
    // Sampled at ~1.5 KHz (display_counter bit 13).
    reg [2:0]      btn_shift;
    reg            btn_debounced;
    reg            btn_prev;
+
+   // BTN1 debounce shift register.
+   reg [2:0]      btn1_shift;
+   reg            btn1_debounced;
+   reg            btn1_prev;
+
+   // Free-running mode toggle.
+   reg            running;
+
+   // Timing edge detection.
    reg            last_sample_bit;
+   reg            last_auto_bit;
 
    reg [6:0]      ones_segments;
    reg [6:0]      tens_segments;
@@ -50,19 +64,30 @@ module top(
    always @(posedge CLK) begin
       display_counter <= display_counter + 1;
 
-      // Debounce: sample BTN_N into shift register at ~1.5 KHz.
-      // Detect rising edge of the sample clock bit.
+      // Debounce: sample buttons into shift registers at ~1.5 KHz.
       last_sample_bit <= display_counter[13];
       if (display_counter[13] && !last_sample_bit) begin
-         btn_shift <= {btn_shift[1:0], ~BTN_N};  // Invert: 1 = pressed
+         btn_shift  <= {btn_shift[1:0],  ~BTN_N};  // Invert: BTN_N is active-low
+         btn1_shift <= {btn1_shift[1:0], BTN1};     // BTN1 is active-high
       end
 
-      // Button is considered pressed when all shift register bits are 1.
-      btn_debounced <= (btn_shift == 3'b111);
+      // Debounced signals: pressed when all 3 shift register bits are 1.
+      btn_debounced  <= (btn_shift  == 3'b111);
+      btn1_debounced <= (btn1_shift == 3'b111);
 
-      // Edge detection: increment on rising edge of debounced signal.
+      // BTN_N edge detection: single-step on rising edge.
       btn_prev <= btn_debounced;
       if (btn_debounced && !btn_prev)
+         count <= count + 1;
+
+      // BTN1 edge detection: toggle free-running mode.
+      btn1_prev <= btn1_debounced;
+      if (btn1_debounced && !btn1_prev)
+         running <= ~running;
+
+      // Auto-increment when running, at ~2.86 Hz.
+      last_auto_bit <= display_counter[21];
+      if (running && display_counter[21] && !last_auto_bit)
          count <= count + 1;
 
       // Display multiplexing state machine (identical to 7seg_count).
