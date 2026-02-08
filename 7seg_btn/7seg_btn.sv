@@ -29,8 +29,8 @@ module top(
    assign {LED5, LED4, LED3, LED2} = 4'b0000;
 
    // Wiring external pins.
-   reg [6:0]      seg_pins_n;
-   reg            digit_sel;
+   logic [6:0]    seg_pins_n;
+   logic          digit_sel;
    assign {P1A9, P1A8, P1A7, P1A4, P1A3, P1A2, P1A1} = seg_pins_n;
    assign P1A10 = digit_sel;
 
@@ -38,39 +38,42 @@ module top(
    // display_state at bits [4:2] gives ~375 KHz refresh.
    // Bit 13 gives ~1.5 KHz for debounce sampling.
    // Bit 21 gives ~2.86 Hz for auto-increment when running.
-   reg [23:0]     display_counter;
-   wire [2:0]     display_state = display_counter[4:2];
+   logic [23:0]   display_counter;
+   logic [2:0]    display_state;
+   assign display_state = display_counter[4:2];
 
    // Hex counter value: incremented by button press or auto-run.
-   reg [7:0]      count;
-   wire [3:0]     ones = count[3:0];
-   wire [3:0]     tens = count[7:4];
+   logic [7:0]    count;
+   logic [3:0]    ones;
+   logic [3:0]    tens;
+   assign ones = count[3:0];
+   assign tens = count[7:4];
 
    // BTN_N debounce shift register.
    // Sampled at ~1.5 KHz (display_counter bit 13).
-   reg [2:0]      btn_shift;
-   reg            btn_debounced;
-   reg            btn_prev;
+   logic [2:0]    btn_shift;
+   logic          btn_debounced;
+   logic          btn_prev;
 
    // BTN1 debounce shift register.
-   reg [2:0]      btn1_shift;
-   reg            btn1_debounced;
-   reg            btn1_prev;
+   logic [2:0]    btn1_shift;
+   logic          btn1_debounced;
+   logic          btn1_prev;
 
    // Free-running mode toggle.
-   reg            running;
+   logic          running;
 
    // Timing edge detection.
-   reg            last_sample_bit;
-   reg            last_auto_bit;
+   logic          last_sample_bit;
+   logic          last_auto_bit;
 
-   reg [6:0]      ones_segments;
-   reg [6:0]      tens_segments;
+   logic [6:0]    ones_segments;
+   logic [6:0]    tens_segments;
 
    digit_to_segments ones2segs(CLK, ones, ones_segments);
    digit_to_segments tens2segs(CLK, tens, tens_segments);
 
-   always @(posedge CLK) begin
+   always_ff @(posedge CLK) begin
       display_counter <= display_counter + 1;
 
       // Debounce: sample buttons into shift registers at ~1.5 KHz.
@@ -116,9 +119,9 @@ endmodule // top
 // N.B., This is positive logic.  Display needs negative.
 module digit_to_segments(input clk,
                          input [3:0] digit,
-                         output reg[6:0] segments
+                         output logic [6:0] segments
                          );
-   always @(posedge clk)
+   always_ff @(posedge clk)
      case (digit)
        0: segments <= 7'b0111111;
        1: segments <= 7'b0000110;
