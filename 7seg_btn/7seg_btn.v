@@ -9,6 +9,11 @@ module top(
            input  CLK,
            input  BTN_N,
            input  BTN1,
+           output LED1,
+           output LED2,
+           output LED3,
+           output LED4,
+           output LED5,
            output P1A1,
            output P1A2,
            output P1A3,
@@ -18,6 +23,9 @@ module top(
            output P1A9,
            output P1A10
            );
+
+   // Turn off all breakoff PMOD LEDs.
+   assign {LED5, LED4, LED3, LED2, LED1} = 5'b00000;
 
    // Wiring external pins.
    reg [6:0]      seg_pins_n;
