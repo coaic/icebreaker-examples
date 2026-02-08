@@ -9,8 +9,9 @@ Based on `7seg_count`, but replaces the auto-incrementing counter with button-tr
 - Device: iCE40 UP5K (ICEbreaker FPGA)
 - Pin constraints: `../icebreaker.pcf`
 - Build: `make` (uses `../main.mk`)
+- Source language: SystemVerilog (`.sv`), converted to Verilog via `sv2v` during build
 
-## Module: `top` (7seg_btn.v)
+## Module: `top` (7seg_btn.sv)
 
 ### Pin Mapping
 
@@ -83,3 +84,21 @@ Identical to `7seg_count`. A lookup table converting a 4-bit hex value (0-F) int
 - Counter wraps naturally from FF to 00 via 8-bit overflow.
 - Breakoff PMOD LEDs explicitly driven: `LED1` shows running state, `LED2`-`LED5` held low to prevent floating.
 - `default_nettype none` enforced for safety.
+
+## SystemVerilog / sv2v Build Flow
+
+The source file is `7seg_btn.sv` (SystemVerilog). The shared `../main.mk` contains a `%.v: %.sv` pattern rule that invokes `sv2v` to convert `.sv` to `.v` before synthesis. The build chain is:
+
+```
+7seg_btn.sv → (sv2v) → 7seg_btn.v → (yosys) → .json → (nextpnr) → .asc → (icepack) → .bin
+```
+
+- The generated `7seg_btn.v` is kept between builds by Make's `.SECONDARY:` directive.
+- `make clean` removes the generated `.v` (via `ADD_CLEAN = $(PROJ).v` in the project Makefile).
+- Projects that use plain `.v` source files (e.g. `7seg_count`) are unaffected — the sv2v rule only fires when a `.v` is needed but only a `.sv` exists.
+
+### SystemVerilog features used
+
+- `logic` instead of `reg`/`wire` — unified type for both procedural and continuous assignments.
+- `always_ff` instead of `always @(posedge ...)` — intent-annotated flip-flop blocks.
+- `output logic` instead of `output reg` — cleaner port declarations.
