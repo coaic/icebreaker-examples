@@ -18,6 +18,7 @@ Based on `7seg_count`, but replaces the auto-incrementing counter with button-tr
 - 1 output pin (`P1A10`) selects which of the two digits is active (`digit_sel`).
 - 1 input pin (`BTN_N`) reads the on-board user button (active-low, pin 10).
 - 1 input pin (`BTN1`) reads button 1 on the PMOD 2 button/LED board (active-high, pin 20).
+- 5 output pins (`LED1`-`LED5`) on the breakoff PMOD: `LED1` indicates free-running mode, `LED2`-`LED5` driven low (off).
 
 ### Differences from `7seg_count`
 
@@ -53,6 +54,7 @@ When `running` is high (toggled by BTN1):
 
 - The counter auto-increments at ~2.86 Hz, using the rising edge of `display_counter[21]` (12 MHz / 2^22).
 - `BTN_N` single-stepping still works while running.
+- `LED1` on the breakoff PMOD lights up to indicate running mode is active.
 
 ### Display Multiplexing State Machine
 
@@ -79,4 +81,5 @@ Identical to `7seg_count`. A lookup table converting a 4-bit hex value (0-F) int
 - Free-running toggle uses the same debounce and edge-detection pattern as single-step.
 - `display_counter` widened to 24 bits (from 20) to provide the auto-increment timing bit; no impact on display or debounce logic.
 - Counter wraps naturally from FF to 00 via 8-bit overflow.
+- Breakoff PMOD LEDs explicitly driven: `LED1` shows running state, `LED2`-`LED5` held low to prevent floating.
 - `default_nettype none` enforced for safety.
