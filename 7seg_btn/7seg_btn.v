@@ -24,8 +24,9 @@ module top(
            output P1A10
            );
 
-   // Turn off all breakoff PMOD LEDs.
-   assign {LED5, LED4, LED3, LED2, LED1} = 5'b00000;
+   // Breakoff PMOD LEDs: LED1 shows running mode, rest off.
+   assign LED1 = running;
+   assign {LED5, LED4, LED3, LED2} = 4'b0000;
 
    // Wiring external pins.
    reg [6:0]      seg_pins_n;
