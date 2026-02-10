@@ -76,7 +76,11 @@ module top(
    always_ff @(posedge CLK) begin
       display_counter <= display_counter + 1;
 
-      // Debounce: sample buttons into shift registers at ~1.5 KHz.
+      // Debounce: sample buttons into shift registers on rising edge of
+      // display_counter[13] (~1.5 KHz).  The non-blocking assignment (<=)
+      // means last_sample_bit still holds the *previous* cycle's value when
+      // the if-condition is evaluated, so the condition is true for exactly
+      // the one clock cycle where bit 13 transitions from 0 to 1.
       last_sample_bit <= display_counter[13];
       if (display_counter[13] && !last_sample_bit) begin
          btn_shift  <= {btn_shift[1:0],  ~BTN_N};  // Invert: BTN_N is active-low
@@ -97,7 +101,9 @@ module top(
       if (btn1_debounced && !btn1_prev)
          running <= ~running;
 
-      // Auto-increment when running, at ~2.86 Hz.
+      // Auto-increment when running, at ~2.86 Hz.  Same rising-edge
+      // detection pattern: non-blocking <= keeps last_auto_bit one cycle
+      // behind display_counter[21], so the condition fires once per 0→1.
       last_auto_bit <= display_counter[21];
       if (running && display_counter[21] && !last_auto_bit)
          count <= count + 1;

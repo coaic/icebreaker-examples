@@ -37,8 +37,8 @@ In `7seg_btn`, the counter and display are separated:
 
 Both buttons use the same debounce technique:
 
-1. **Prescaler**: Bit 13 of `display_counter` provides a ~1.5 KHz sample clock (12 MHz / 2^13).
-2. **Shift register**: Each button is sampled into its own 3-bit shift register at each rising edge of the sample clock. `BTN_N` is inverted (active-low), `BTN1` is used directly (active-high).
+1. **Prescaler with rising-edge detection**: Bit 13 of `display_counter` toggles at ~1.5 KHz (12 MHz / 2^13). A one-cycle-delayed copy (`last_sample_bit`) is kept via non-blocking assignment (`<=`). Because `<=` updates at the *end* of the clock cycle, `last_sample_bit` still holds the previous cycle's value when the condition `display_counter[13] && !last_sample_bit` is evaluated. This makes the condition true for exactly the one clock cycle where bit 13 transitions 0→1 (rising edge), producing a single-cycle pulse at ~1.5 KHz.
+2. **Shift register**: Each button is sampled into its own 3-bit shift register on each rising-edge pulse. `BTN_N` is inverted (active-low), `BTN1` is used directly (active-high).
 3. **Debounced signal**: A button is considered pressed only when all 3 shift register bits are 1 (i.e., three consecutive samples show the button held down). This requires ~2 ms of stable press.
 
 ### Edge Detection
@@ -53,7 +53,7 @@ Both buttons use rising-edge detection to trigger exactly once per press:
 
 When `running` is high (toggled by BTN1):
 
-- The counter auto-increments at ~2.86 Hz, using the rising edge of `display_counter[21]` (12 MHz / 2^22).
+- The counter auto-increments at ~2.86 Hz, using the same non-blocking rising-edge detection pattern on `display_counter[21]` (12 MHz / 2^22).
 - `BTN_N` single-stepping still works while running.
 - `LED1` on the breakoff PMOD lights up to indicate running mode is active.
 
